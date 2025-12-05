@@ -3,15 +3,30 @@
     <div class="header">
       <div class="header-content">
         <h1 class="logo">博客系统</h1>
-        <div class="nav-menu">
+        <div class="nav-menu" v-if="!authStore.isAuthenticated">
           <el-button type="primary" @click="$router.push('/login')">登录</el-button>
           <el-button @click="$router.push('/register')">注册</el-button>
+        </div>
+        <div class="nav-menu" v-else>
+          <el-dropdown @command="handleCommand">
+            <span class="user-info">
+              <el-avatar :size="32" :icon="UserFilled" />
+              <span class="username">{{ authStore.username }}</span>
+              <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
     </div>
     
     <div class="main-content">
-      <div class="hero-section">
+      <div class="hero-section" v-if="!authStore.isAuthenticated">
         <h2>欢迎来到博客系统</h2>
         <p>分享您的想法，记录生活点滴</p>
         <div class="cta-buttons">
@@ -20,6 +35,19 @@
           </el-button>
           <el-button size="large" @click="$router.push('/login')">
             立即登录
+          </el-button>
+        </div>
+      </div>
+      
+      <div class="hero-section" v-else>
+        <h2>欢迎回来，{{ authStore.username }}！</h2>
+        <p>开始记录您的精彩瞬间吧</p>
+        <div class="cta-buttons">
+          <el-button type="primary" size="large" @click="handleWrite">
+            写篇文章
+          </el-button>
+          <el-button size="large" @click="handleMyArticles">
+            我的文章
           </el-button>
         </div>
       </div>
@@ -49,7 +77,46 @@
 defineOptions({
   name: 'HomePage'
 })
-import { EditPen, Share, DataAnalysis } from '@element-plus/icons-vue'
+import { EditPen, Share, DataAnalysis, UserFilled, ArrowDown } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import { ElMessage, ElMessageBox } from 'element-plus'
+
+const router = useRouter()
+const authStore = useAuthStore()
+
+// 处理下拉菜单命令
+const handleCommand = async (command: string) => {
+  switch (command) {
+    case 'profile':
+      ElMessage.info('个人中心功能开发中...')
+      break
+    case 'logout':
+      try {
+        await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+        await authStore.logout()
+        ElMessage.success('已退出登录')
+        router.push('/login')
+      } catch (error) {
+        // 用户取消操作
+      }
+      break
+  }
+}
+
+// 写文章
+const handleWrite = () => {
+  ElMessage.info('写文章功能开发中...')
+}
+
+// 我的文章
+const handleMyArticles = () => {
+  ElMessage.info('我的文章功能开发中...')
+}
 </script>
 
 <style scoped>
@@ -87,6 +154,27 @@ import { EditPen, Share, DataAnalysis } from '@element-plus/icons-vue'
 .nav-menu {
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background-color 0.3s;
+}
+
+.user-info:hover {
+  background-color: #f5f5f5;
+}
+
+.username {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
 }
 
 .main-content {

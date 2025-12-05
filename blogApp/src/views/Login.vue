@@ -65,17 +65,19 @@
 defineOptions({
   name: 'LoginPage'
 })
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import axios from 'axios'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
 const loading = ref(false)
 const loginFormRef = ref<FormInstance>()
 
-// ❗ email 改成 username
+// 登录表单
 const loginForm = reactive({
   username: '',
   password: '',
@@ -93,9 +95,7 @@ const loginRules: FormRules = {
   ]
 }
 
-// =========================
-//        登录方法
-// =========================
+// 登录方法
 const handleLogin = async () => {
   if (!loginFormRef.value) return;
 
@@ -103,31 +103,27 @@ const handleLogin = async () => {
     await loginFormRef.value.validate();
     loading.value = true;
 
-    // 后端要求字段：username + password
-    const res = await axios.post('/api/auth/login', {
-      username: loginForm.username,
-      password: loginForm.password
-    });
-
-    const { token, userId, username } = res.data;
-
-    localStorage.setItem('token', token);
-    localStorage.setItem('userId', userId);
-    localStorage.setItem('username', username);
+    await authStore.login(loginForm.username, loginForm.password);
 
     ElMessage.success('登录成功！');
-    router.push('/');
+    
+    // 如果有重定向地址，跳转到指定页面
+    const redirect = route.query.redirect as string
+    router.push(redirect || '/');
 
-  } catch (error: unknown) {
-    if (axios.isAxiosError(error)) {
-      ElMessage.error(error.response?.data || '登录失败');
-    } else {
-      ElMessage.error('发生未知错误');
-    }
+  } catch (error: any) {
+    ElMessage.error(error.response?.data || error.message || '登录失败');
   } finally {
     loading.value = false;
   }
 };
+
+// 检查是否已登录
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    router.push('/')
+  }
+})
 </script>
 
 
