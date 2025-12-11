@@ -110,7 +110,9 @@ const handleCommand = async (command: string) => {
 
 // 写文章
 const handleWrite = () => {
+   router.push('/write')
   ElMessage.info('写文章功能开发中...')
+
 }
 
 // 我的文章
