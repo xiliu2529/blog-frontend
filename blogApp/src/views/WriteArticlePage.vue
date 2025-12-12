@@ -31,6 +31,33 @@
             </el-form-item>
           </div>
           
+          <div class="category-section">
+            <el-form-item prop="categoryId" class="category-form-item">
+              <template #label>
+                <span class="form-label">
+                  <i class="icon-category"></i>
+                  文章分类
+                  <span class="category-hint">选择合适的分类让读者更容易找到您的文章</span>
+                </span>
+              </template>
+              <el-select
+                v-model="article.categoryId"
+                placeholder="请选择文章分类"
+                size="large"
+                class="category-select"
+                :loading="loading"
+                clearable
+              >
+                <el-option
+                  v-for="category in categories"
+                  :key="category.id"
+                  :label="category.name"
+                  :value="category.id"
+                />
+              </el-select>
+            </el-form-item>
+          </div>
+          
           <div class="content-section">
             <el-form-item prop="content" class="content-form-item">
               <template #label>
@@ -231,14 +258,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
+import api from '../utils/request'
+
+interface Category {
+  id: number
+  name: string
+}
 
 interface Article {
   title: string
   content: string
+  categoryId?: number
 }
 
 const router = useRouter()
@@ -247,18 +281,46 @@ const saving = ref(false)
 
 const article = ref<Article>({
   title: '',
-  content: ''
+  content: '',
+  categoryId: undefined
 })
+
+const categories = ref<Category[]>([])
+const loading = ref(false)
 
 const rules = reactive<FormRules>({
   title: [
     { required: true, message: '请输入文章标题', trigger: 'blur' },
     { min: 2, max: 100, message: '标题长度应在 2 到 100 个字符之间', trigger: 'blur' }
   ],
+  categoryId: [
+    { required: true, message: '请选择文章分类', trigger: 'change' }
+  ],
   content: [
     { required: true, message: '请输入文章内容', trigger: 'blur' },
     { min: 10, message: '文章内容至少需要 10 个字符', trigger: 'blur' }
   ]
+})
+
+// 获取分类列表
+const fetchCategories = async () => {
+  try {
+    loading.value = true
+    const response = await api.get('/api/categories')
+    categories.value = response.data
+    console.log('获取分类列表：', categories.value);
+    
+  } catch (error) {
+    console.error('获取分类失败：', error)
+    ElMessage.error('获取分类列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 组件挂载时获取分类
+onMounted(() => {
+  fetchCategories()
 })
 
 // 插入Markdown语法
@@ -314,11 +376,17 @@ const handleSave = async () => {
   saving.value = true
   
   try {
-    // TODO: 调用 API 保存文章
-    console.log('保存文章数据：', article.value)
+    // 调用 API 保存文章
+    const payload = {
+  title: article.value.title,
+  content: article.value.content,
+  categoryId: article.value.categoryId
 
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1500))
+}
+    console.log('保存文章数据：', payload)
+    
+    const response = await api.post('/api/articles', payload)
+    console.log('保存结果：', response.data)
 
     ElMessage({
       message: '文章发布成功！',
@@ -328,7 +396,7 @@ const handleSave = async () => {
     router.push('/') // 保存后跳回首页
   } catch (error) {
     console.error('保存文章失败：', error)
-    ElMessage.error('文章发布失败，请重试')
+    ElMessage.error(error.response?.data?.message || '文章发布失败，请重试')
   } finally {
     saving.value = false
   }
@@ -418,6 +486,47 @@ const handleCancel = async () => {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   padding: 40px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* 分类区域 */
+.category-section {
+  background: linear-gradient(135deg, #fefefe 0%, #f8f9fa 100%);
+  padding: 32px 40px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.category-form-item {
+  margin-bottom: 0;
+}
+
+.category-select {
+  width: 100%;
+  max-width: 300px;
+}
+
+.category-select :deep(.el-input__wrapper) {
+  background: white;
+  border-radius: 10px;
+  border: 2px solid #e4e7ed;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.category-select :deep(.el-input__wrapper):hover {
+  border-color: #c0c4cc;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.category-select :deep(.el-input__wrapper.is-focus) {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.category-hint {
+  font-weight: 400;
+  color: #667eea;
+  font-size: 14px;
+  margin-left: 8px;
 }
 
 .title-form-item {
@@ -617,6 +726,7 @@ const handleCancel = async () => {
 /* 图标样式 */
 .icon-edit::before { content: "✏️"; }
 .icon-heading::before { content: "📝"; }
+.icon-category::before { content: "📁"; }
 .icon-code::before { content: "💻"; }
 .icon-bold::before { content: "B"; font-weight: bold; }
 .icon-italic::before { content: "I"; font-style: italic; }
@@ -638,6 +748,7 @@ const handleCancel = async () => {
   }
   
   .title-section,
+  .category-section,
   .content-section,
   .action-section {
     padding: 24px 20px;
@@ -667,6 +778,11 @@ const handleCancel = async () => {
   .cancel-btn {
     width: 100%;
     padding: 14px;
+  }
+  
+  .category-select {
+    max-width: none;
+    width: 100%;
   }
 }
 
